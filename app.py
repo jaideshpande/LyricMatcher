@@ -10,6 +10,8 @@ from fuzzywuzzy import fuzz
 import streamlit as st
 import langdetect
 from langdetect import detect
+import re
+
 
 
 
@@ -42,78 +44,220 @@ pc = Pinecone(
 index=pc.Index('openai')
 
 
-def retrieve_lyrics(search_input): # lyrics of song using Genius API
-    song=genius_object.search_song(title=search_input)
-    lyrics = song.lyrics
-    return lyrics
+# Function to classify whether the text is actual song lyrics or not using GPT-3.5
+def is_lyrics(text):
+    """
+    Use GPT-3.5 to classify whether a given text is likely to be song lyrics.
+    
+    Args:
+        text (str): The text to classify.
+    
+    Returns:
+        bool: True if the text is classified as lyrics, False otherwise.
+    """
+    # Construct the prompt for classification
+    messages = [
+        {"role": "system", "content": "You are an AI language model that classifies text as song lyrics or not."},
+        {"role": "user", "content": f"Classify the following text as 'Lyrics' or 'Non-Lyrics':\n\nText: {text}\n\nClassification:"}
+    ]
+    
+    # Use GPT-3.5 turbo to classify the text
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=messages,
+        max_tokens=5,
+        temperature=0.3,
+        n=1,
+        stop=["\n"]
+    )
+    
+    # Get the classification result
+    classification = response['choices'][0]['message']['content'].strip()
+    
+    return classification == "Lyrics"
 
 
 def vectorize_lyrics(search_input):
-    lyrics = retrieve_lyrics(search_input) # gets lyrics of currently playing track with retrieve_lyrics. load_query_vector updates the vector with unique id
-    res = openai.Embedding.create(
-    input = 
-        lyrics
-    , engine=MODEL)
-    query_vector_embedding = res['data'][0]['embedding']
-    return query_vector_embedding 
-
-
-# Runs similarity search between currently playing song and all songs in the vector db. Returns song_and_artist string
-def similarity_search(search_input):
-    result = index.query(vector=vectorize_lyrics(search_input), top_k=10)
-    print(result)
+    lyrics = retrieve_lyrics(search_input)  # Retrieve lyrics for the input song
     
-    # Iterate through the top matches and find the first valid one
+    # Check if lyrics are retrieved and within the token length limit
+    if lyrics and is_lyrics(lyrics):
+        # Limit the lyrics to 8192 characters to ensure compatibility with the OpenAI model
+        lyrics = lyrics[:8192]
+        
+        # Create the embedding using the OpenAI API
+        res = openai.Embedding.create(
+            input=lyrics,
+            engine=MODEL
+        )
+        query_vector_embedding = res['data'][0]['embedding']
+        return query_vector_embedding
+    else:
+        print(f"No valid lyrics found for {search_input}. Cannot create embedding.")        
+        return None
+
+# Function to search Spotify for song titles and artists
+def search_spotify(query):
+    results = sp.search(q=query, type='track', limit=10)  # Search for tracks, limit to top 10 results
+    tracks = []
+    for item in results['tracks']['items']:
+        track_name = item['name']
+        artist_name = item['artists'][0]['name']
+        track_display = f"{track_name} by {artist_name}"
+        tracks.append(track_display)
+    return tracks
+
+
+# Function to classify whether the text is actual song lyrics or not using GPT-3.5
+def is_lyrics(text):
+    """
+    Use GPT-3.5 to classify whether a given text is likely to be song lyrics.
+    
+    Args:
+        text (str): The text to classify.
+    
+    Returns:
+        bool: True if the text is classified as lyrics, False otherwise.
+    """
+    messages = [
+        {"role": "system", "content": "You are an AI language model that classifies text as song lyrics or not."},
+        {"role": "user", "content": f"Classify the following text as 'Lyrics' or 'Non-Lyrics':\n\nText: {text}\n\nClassification:"}
+    ]
+    
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=messages,
+        max_tokens=5,
+        temperature=0.3,
+        n=1,
+        stop=["\n"]
+    )
+    
+    classification = response['choices'][0]['message']['content'].strip()
+    return classification == "Lyrics"
+
+# Function to get Spotify recommendations if lyrics are not valid
+def get_spotify_recommendation(track_name):
+    """
+    Get Spotify song recommendations based on the track name.
+    
+    Args:
+        track_name (str): The name of the song to get recommendations for.
+    
+    Returns:
+        str: Recommended song titles and artists.
+    """
+    results = sp.search(q=track_name, type='track', limit=3)
+    recommendations = []
+
+    for item in results['tracks']['items']:
+        track_name = item['name']
+        artist_name = item['artists'][0]['name']
+        recommendations.append(f"{track_name} by {artist_name}")
+
+    if recommendations:
+        return f"Recommended songs:\n" + "\n".join(recommendations)
+    else:
+        return "No recommendations found."
+    
+
+
+def retrieve_lyrics(search_input):
+    """
+    Retrieve lyrics for a given search input and validate using GPT-3.5.
+
+    Args:
+        search_input (str): The song title and artist name.
+    
+    Returns:
+        str: Valid lyrics if found, else None.
+    """
+    try:
+        song = genius_object.search_song(title=search_input)
+        if song and song.lyrics:
+            lyrics = song.lyrics
+
+            # Use GPT-3.5 to classify if the retrieved lyrics look like actual lyrics
+            if is_lyrics(lyrics):
+                return lyrics
+            else:
+                print("The retrieved text does not look like song lyrics. Falling back to Spotify recommendations...")
+                return None  # Indicate invalid lyrics
+        else:
+            print(f"No lyrics found for {search_input}.")
+            return None
+    except Exception as e:
+        print(f"Error retrieving lyrics for {search_input}: {e}")
+        return None
+
+def similarity_search(search_input):
+    """
+    Search for similar songs based on the lyrics vector of the input song.
+    
+    Args:
+        search_input (str): The song title and artist name.
+    
+    Returns:
+        str: The most similar song ID if found, else None.
+    """
+    # Generate the vector for the input song's lyrics
+    vector = vectorize_lyrics(search_input)
+    if not vector:
+        return None  # Cannot perform similarity search without a valid vector
+
+    # Perform the similarity search using Pinecone
+    result = index.query(vector=vector, top_k=10)
     for match in result['matches']:
         song_id = match['id']
-        
         if fuzz.ratio(search_input.lower(), song_id.lower()) > 80:
             continue
-        # Fetch the lyrics using Genius API
         lyrics = retrieve_lyrics(song_id)
-        
-        # Check if the lyrics are too short or too long
-        if len(lyrics) < 200 or len(lyrics) > 5000:  # Adjust thresholds as needed
-            print(f"Lyrics for {song_id} are too short/long, moving to the next match.")
-            index.delete(ids=song_id)
-            continue
-
-        # Detect language of the song title and lyrics
-        try:
-            title_lang = detect(song_id)   # Detect language of the song title
-            lyrics_lang = detect(lyrics)   # Detect language of the lyrics
-            
-            # Check if the title and lyrics are in the same language
-            if title_lang != lyrics_lang:
-                print(f"Language mismatch for {song_id}: Title is {title_lang}, but lyrics are {lyrics_lang}. Skipping.")
-                index.delete(ids=song_id)
-                continue
-        except langdetect.lang_detect_exception.LangDetectException:
-            print(f"Could not detect language for {song_id} or lyrics, skipping.")
-            continue
-        
-        # If no issues, return the song
-        return song_id
-    
-    # Fallback in case no valid songs were found
-    return result['matches'][0]['id']
+        if lyrics:
+            return song_id  # Return the first valid song ID
+    return None
 
 
-# Streamlit App Interface
-st.title("Music Similarity Search")
 
-# Get input from the user
-search_input = st.text_input("Enter a song title and artist (e.g., 'Wonderwall by Oasis'): ")
+# Streamlit UI
+st.title("Spotify Song Search")
 
-if st.button("Find Similar Songs"):
-    if search_input:
-        similar_song = similarity_search(search_input)
-        if similar_song:
-            st.write(f"Suggested song: {similar_song}")
-            suggested_lyrics = retrieve_lyrics(similar_song)
-            if suggested_lyrics:
-                st.write(f"Lyrics: {suggested_lyrics[:1000]}...")  # Display the first 500 characters of the lyrics
+# Text input box with suggestions (autocomplete functionality)
+search_input = st.text_input("Type a song title or artist name:")
+
+if search_input:
+    # Fetch suggestions from Spotify API based on input
+    suggestions = search_spotify(search_input)
+
+    # Use columns to align the dropdown and the search button next to each other
+    col1, col2 = st.columns([3, 1])  # Adjust column width ratio as needed
+
+    # Display suggestions in a dynamic dropdown menu within column 1
+    selected_song = col1.selectbox("Suggestions:", suggestions, key="dropdown")
+
+    # Add a "Search" button in column 2
+    search_button = col2.button("Search")
+
+    # Only run similarity search if a song is selected and "Search" button is clicked
+    if search_button and selected_song:
+        st.write(f"You selected: {selected_song}")
+
+        # Check if input song's lyrics are valid
+        lyrics = retrieve_lyrics(selected_song)
+
+        # If lyrics are valid, run similarity search; otherwise, use Spotify recommendations
+        if lyrics:
+            similar_song = similarity_search(selected_song)
+            if similar_song:
+                st.write(retrieve_lyrics(selected_song))
+                st.write(f"Similar song found: {similar_song}")
+                #st.write(retrieve_lyrics(similar_song))
+            else:
+                st.error("No similar songs found.")
         else:
-            st.error("No similar songs found.")
-    else:
-        st.error("Please enter a valid song title and artist.")
+            # Fallback to Spotify recommendations if lyrics are not valid
+            response = openai.Embedding.create(
+            input=selected_song,
+            engine=MODEL)  
+            simple_rec = response['data'][0]['embedding']
+            basic_sim_search = index.query(vector=simple_rec,top_k=1)
+            st.write(basic_sim_search)          
