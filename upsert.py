@@ -98,13 +98,14 @@ def get_lyrics_of_single_song(search_input):
         # Extract the lyrics from the response
         if data['message']['header']['status_code'] == 200:
             lyrics = data['message']['body']['lyrics']['lyrics_body']
+            lyrics = lyrics.split("*******")[0].strip()
             return lyrics
         else:
             return "Lyrics not found."
     else:
         return f"Error: {response.status_code} - Unable to retrieve lyrics."
 
-
+# Main Controller Method for Upserting. Call this with a playlist_id to run batch upsert
 # New method that loops through get_playlist_tracks and, and calls get_lyrics_of_single_song for each track, then upserts to Pinecone
 def upsert_songs_individually(sp,playlist_id):
     tracks = get_playlist_tracks(sp,playlist_id)

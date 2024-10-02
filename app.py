@@ -75,13 +75,15 @@ def similarity_search(search_input):
 
     # Perform the similarity search using Pinecone
     result = index.query(vector=embedding, top_k=10)
+    suggestion_tuples=[]
     for match in result['matches']:
         song_id = match['id']
         if fuzz.ratio(search_input.lower(), song_id.lower()) > 80:
             continue
         lyrics = get_lyrics_of_single_song(song_id)
-        if lyrics:
-            return song_id  # Return the first valid song ID
+        suggestion_tuples.append((song_id,lyrics))
+        if len(suggestion_tuples) > 5:
+            return suggestion_tuples  # Return the 5 most similar songs
     return None
 
 
@@ -114,11 +116,14 @@ if search_input:
 
         # If lyrics are valid, run similarity search; otherwise, use vectorize the title only
         if lyrics:
-            similar_song = similarity_search(selected_song)
-            if similar_song:
-                st.write(get_lyrics_of_single_song(selected_song))
-                st.write(f"Similar song found: {similar_song}")
-                #st.write(retrieve_lyrics(similar_song))
+            similar_songs = similarity_search(selected_song)
+            if similar_songs:
+                for tuple_item in similar_songs:
+                    #st.write(get_lyrics_of_single_song(selected_song))
+                    song=tuple_item[0]
+                    lyrics=tuple_item[1]
+                    st.write(f"Similar song found: **{song}**")
+                    st.write(f"Lyrics: {lyrics}")
             else:
                 st.error("No similar songs found.")
         else:
