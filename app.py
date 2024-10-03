@@ -88,6 +88,79 @@ def similarity_search(search_input):
 
 
 
+def get_embed_url(search_input, sp):
+    """
+    Retrieve the Spotify embed URL for a given song title and artist name.
+
+    Args:
+        search_input (str): A string in the format "{song title} by {artist}".
+        sp (spotipy.Spotify): An authenticated Spotipy client.
+
+    Returns:
+        str: The Spotify embed URL of the exact song if found, otherwise None.
+    """
+    # Split the search input into song title and artist
+    if " by " in search_input:
+        title, artist = search_input.split(" by ", 1)
+    else:
+        return None  # Invalid format, expected "TITLE by ARTIST"
+
+    # Search for the track using the song title and artist name
+    results = sp.search(q=f"track:{title} artist:{artist}", type='track', limit=5)  # Increase limit to get more options
+
+    # Check for the most relevant result based on exact match
+    for track in results['tracks']['items']:
+        track_name = track['name'].lower()
+        track_artists = ', '.join([a['name'].lower() for a in track['artists']])
+
+        # Confirm the track name and artist match exactly
+        if title.lower() == track_name and artist.lower() in track_artists:
+            track_id = track['id']
+            embed_url = f"https://open.spotify.com/embed/track/{track_id}"
+            return embed_url
+    
+    # Return None if no exact match was found
+    return None
+
+
+
+def generate_song_description(input_lyrics, lyrics):
+    """
+    Generate a witty, creative one-sentence description for given song lyrics using GPT-3.5.
+
+    Args:
+        lyrics (str): The song lyrics to describe.
+
+    Returns:
+        str: A witty, one-sentence description of the song lyrics.
+    """
+    # Construct the prompt for generating the description
+    messages = [
+        {"role": "system", "content": "You are a AI music reviewer that compares the lyrics of two songs and writes a 1 sentence description of why the songs are similar for a website's music catalog. Make sure your output ends with a period."},
+        {"role": "user", "content": f"Create a 1 sentence description of why these songs' lyrics are similar. Use direct quotes from lyrics if useful:\n\n{input_lyrics}{lyrics}"}
+    ]
+    
+    # Use GPT-3.5 turbo to generate the description
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=messages,
+        max_tokens=50,  # Allow for more tokens to generate a full description
+        temperature=0.7,  # Increase temperature for more creativity
+        n=1,
+        stop=None
+    )
+    
+    # Get the generated description
+    description = response['choices'][0]['message']['content'].strip()
+    
+    return description
+
+
+
+
+
+
+
 # Streamlit UI
 st.title("Spotify Song Search")
 
@@ -112,22 +185,25 @@ if search_input:
         st.write(f"You selected: {selected_song}")
 
         # Check if input song's lyrics are valid
-        lyrics = get_lyrics_of_single_song(selected_song)
+        input_lyrics = get_lyrics_of_single_song(selected_song)
 
         # If lyrics are valid, run similarity search; otherwise, use vectorize the title only
-        if lyrics:
+        if input_lyrics:
             similar_songs = similarity_search(selected_song)
             if similar_songs:
                 for tuple_item in similar_songs:
-                    #st.write(get_lyrics_of_single_song(selected_song))
                     song=tuple_item[0]
                     lyrics=tuple_item[1]
                     st.write(f"Similar song found: **{song}**")
-                    st.write(f"Lyrics: {lyrics}")
+                    spotify_embed_url = get_embed_url(song,sp)
+                    st.components.v1.iframe(spotify_embed_url, width=300, height=80)
+                    description = generate_song_description(input_lyrics,lyrics)
+                    st.write(description)
+                    st.write(f"**Lyrics**: {lyrics}")
             else:
                 st.error("No similar songs found.")
         else:
-            # Create embedding based off song title
+            # Create embedding based off song title if MusixMatch can find the query song
             response = openai.Embedding.create(
             input=selected_song,
             engine=MODEL)  
