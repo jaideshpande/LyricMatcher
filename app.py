@@ -124,7 +124,7 @@ def get_embed_url(search_input, sp):
 
 
 
-def generate_song_description(input_lyrics, lyrics):
+def generate_song_description(input_lyrics, lyrics, input_song,suggestion_song):
     """
     Generate a witty, creative one-sentence description for given song lyrics using GPT-3.5.
 
@@ -137,7 +137,7 @@ def generate_song_description(input_lyrics, lyrics):
     # Construct the prompt for generating the description
     messages = [
         {"role": "system", "content": "You are a AI music reviewer that compares the lyrics of two songs and writes a 1 sentence description of why the songs are similar for a website's music catalog. Make sure your output ends with a period."},
-        {"role": "user", "content": f"Create a 1 sentence description of why these songs' lyrics are similar. Use direct quotes from lyrics if useful:\n\n{input_lyrics}{lyrics}"}
+        {"role": "user", "content": f"Create a 1 sentence description of why these songs' lyrics are similar. Use the input song name {input_song} and suggested song name {suggestion_song} in the sentence so it doesn't sound overly general. Use direct quotes from lyrics if useful:\n\n{input_lyrics}{lyrics}"}
     ]
     
     # Use GPT-3.5 turbo to generate the description
@@ -163,6 +163,28 @@ def generate_song_description(input_lyrics, lyrics):
 
 # Streamlit UI
 st.title("Spotify Song Search")
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color: #ccffcc;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+# Create three columns for side-by-side images
+col1, col2, col3 = st.columns(3)
+
+# Display an image in each column
+with col1:
+    st.image("Pics/spotifylogo.png", width=150)  # Adjust width as needed
+
+with col2:
+    st.image("Pics/openailogo.png", width=150)  # Adjust width as needed
+
+with col3:
+    st.image("Pics/pineconelogo.jpg", width=150)  # Adjust width as needed
 
 # Text input box with suggestions (autocomplete functionality)
 search_input = st.text_input("Type a song title or artist name:")
@@ -197,7 +219,7 @@ if search_input:
                     st.write(f"Similar song found: **{song}**")
                     spotify_embed_url = get_embed_url(song,sp)
                     st.components.v1.iframe(spotify_embed_url, width=300, height=80)
-                    description = generate_song_description(input_lyrics,lyrics)
+                    description = generate_song_description(input_lyrics,lyrics,selected_song,song)
                     st.write(description)
                     st.write(f"**Lyrics**: {lyrics}")
             else:
