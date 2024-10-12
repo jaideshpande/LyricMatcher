@@ -9,25 +9,26 @@ import re
 from pinecone import Pinecone
 from upsert import get_lyrics_of_single_song, vectorize_single_song
 from typing import List, Dict
+import os
 
 # Initialize necessary APIs and settings
 MODEL = "text-embedding-ada-002"
 GPT_MODEL = "gpt-4"
-PINECONE_INDEX_NAME = "openai"  # Replace with your actual Pinecone index name
+PINECONE_INDEX_NAME = os.getenv('PINECONE_INDEX_NAME')  # Replace with your actual Pinecone index name
 
 # Spotify developer credentials (Replace with your own or use environment variables)
-client_id = '0fd41a617c7a41018be9a9cb8bcf2582'
-client_secret = '7b977dcb49d64486ae0b1e9018562f45'
+client_id = os.getenv('SPOTIFY_CLIENT_ID')
+client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
 redirect_uri = 'http://localhost:3000/callback'
 scope = 'playlist-read-collaborative playlist-read-private user-modify-playback-state user-read-playback-state'
 auth_manager = SpotifyOAuth(client_id=client_id, client_secret=client_secret, redirect_uri=redirect_uri, scope=scope)
 sp = spotipy.Spotify(auth_manager=auth_manager)
 
 # OpenAI API initialization
-openai.api_key = 'sk-proj-RtY23zzqdreL9a9g8eKTT3BlbkFJM10G3cjAs0GDnSKeJjSB'
+openai.api_key = os.getenv('OPENAI_API_KEY')
 
 pc = Pinecone(
-    api_key="dbe7110d-adaf-4f75-ab9f-41e99fc9533f"
+    api_key=os.getenv('PINECONE_API_KEY')
 )
 index=pc.Index('openai')
 
@@ -224,4 +225,4 @@ with right_col:
                         st.write(f"   Title: {result['metadata'].get('title', 'Unknown')}")
                         st.write(f"   Album: {result['metadata'].get('album', 'Unknown')}")
                     st.write("---")
-    st.markdown('</div>', unsafe_allow_html=True)  # Close the div container
+    st.markdown('</div>', unsafe_allow_html=True)  # Close the div container.
