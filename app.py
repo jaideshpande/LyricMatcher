@@ -20,7 +20,7 @@ from upsert import get_lyrics_of_single_song, vectorize_single_song
 # Initialize necessary APIs and settings
 MODEL = "text-embedding-ada-002"
 GPT_MODEL = "gpt-4"
-PINECONE_INDEX_NAME = st.secrets["PINECONE_INDEX_NAME"]  # Replace with your actual Pinecone index name
+INDEX_NAME = st.secrets["PINECONE_INDEX_NAME"]  # Replace with your actual Pinecone index name
 
 # Spotify developer credentials (Replace with your own or use environment variables)
 client_id = st.secrets["SPOTIFY_CLIENT_ID"]
@@ -36,7 +36,7 @@ openai.api_key = st.secrets["OPENAI_API_KEY"]
 pc = Pinecone(
     api_key=st.secrets["PINECONE_API_KEY"]
 )
-index=pc.Index(PINECONE_INDEX_NAME)
+index=pc.Index(INDEX_NAME)
 
 
 
