@@ -16,15 +16,14 @@ import os
 
 
 
-
 # Initialize necessary APIs and settings
 MODEL = "text-embedding-ada-002"
 GPT_MODEL = "gpt-4"
-PINECONE_INDEX_NAME = os.getenv('PINECONE_INDEX_NAME')  # Replace with your actual Pinecone index name
+PINECONE_INDEX_NAME = st.secrets["PINECONE_INDEX_NAME"]  # Replace with your actual Pinecone index name
 
 # Spotify developer credentials (Replace with your own or use environment variables)
-client_id = os.getenv('SPOTIFY_CLIENT_ID')
-client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
+client_id = st.secrets["SPOTIFY_CLIENT_ID"]
+client_secret = st.secrets["SPOTIFY_CLIENT_SECRET"]
 redirect_uri = 'http://localhost:3000/callback'
 scope = 'playlist-read-collaborative playlist-read-private user-modify-playback-state user-read-playback-state'
 auth_manager = SpotifyOAuth(client_id=client_id, client_secret=client_secret, redirect_uri=redirect_uri, scope=scope)
@@ -33,15 +32,15 @@ sp = spotipy.Spotify(auth_manager=auth_manager)
 
 
 #CONVERT TO ENV VARIABLES
-MUSIXMATCH_API_KEY= os.getenv('MUSIXMATCH_API_KEY')
+MUSIXMATCH_API_KEY= st.secrets["MUSIXMATCH_API_KEY"]
 
 # OpenAI API initialization
-openai.api_key = os.getenv('OPENAI_API_KEY')
+openai.api_key = st.secrets['OPENAI_API_KEY']
 
 pc = Pinecone(
-    api_key=os.getenv('PINECONE_API_KEY')
+    api_key=st.secrets['PINECONE_API_KEY']
 )
-index=pc.Index('openai')
+index=pc.Index(PINECONE_INDEX_NAME)
 
 
 
