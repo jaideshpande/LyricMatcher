@@ -19,7 +19,7 @@ INDEX_NAME = st.secrets["PINECONE_INDEX_NAME"]  # Replace with your actual Pinec
 # Spotify developer credentials (Replace with your own or use environment variables)
 client_id = st.secrets["SPOTIFY_CLIENT_ID"]
 client_secret = st.secrets["SPOTIFY_CLIENT_SECRET"]
-redirect_uri = 'http://localhost:3000/callback'
+redirect_uri = 'https://lyricmatcher.streamlit.app/callback'
 scope = 'playlist-read-collaborative playlist-read-private user-modify-playback-state user-read-playback-state'
 auth_manager = SpotifyOAuth(client_id=client_id, client_secret=client_secret, redirect_uri=redirect_uri, scope=scope)
 sp = spotipy.Spotify(auth_manager=auth_manager)
