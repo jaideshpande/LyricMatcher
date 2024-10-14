@@ -6,6 +6,7 @@ import streamlit as st
 import re
 from pinecone import Pinecone
 from typing import List, Dict
+import requests
 
 
 # Initialize necessary APIs and settings
