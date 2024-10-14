@@ -5,6 +5,8 @@ from fuzzywuzzy import fuzz
 import streamlit as st
 import re
 from pinecone import Pinecone
+from typing import List, Dict
+
 
 # Initialize necessary APIs and settings
 MODEL = "text-embedding-ada-002"
