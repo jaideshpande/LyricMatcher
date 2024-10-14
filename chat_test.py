@@ -6,6 +6,7 @@ import streamlit as st
 import re
 from pinecone import Pinecone
 from typing import List, Dict
+from upsert import get_lyrics_of_single_song, vectorize_single_song
 
 # Initialize necessary APIs and settings
 MODEL = "text-embedding-ada-002"
