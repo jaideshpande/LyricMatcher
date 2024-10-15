@@ -1,5 +1,5 @@
 # LyricMatcher
-Recommends songs based on the semantic similarity of the input song's lyrics
+Recommends songs based on the semantic similarity of the input song's lyrics. Alternatively, there's a search bar on the right side that lets you enter phrases or themes, such as "missing my ex" or "partying in the summer" and LyricMatcher will return the five songs with the highest Pinecone similarity score to that query.
 
 I'm hosting this on Streamlit Cloud. Check it out here: https://lyricmatcher-jkojuiabcj7xstimzd2fq9.streamlit.app/
 
