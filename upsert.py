@@ -1,19 +1,12 @@
 import spotipy
-from spotipy.oauth2 import SpotifyOAuth
-from collections import Counter
-import time
-import lyricsgenius as lg
+from spotipy.oauth2 import SpotifyClientCredentials
 import openai
-import os
-from pinecone import Pinecone, ServerlessSpec
 from fuzzywuzzy import fuzz
 import streamlit as st
-import langdetect
-from langdetect import detect
 import re
+from pinecone import Pinecone
+from typing import List, Dict
 import requests
-import os
-
 
 
 # Initialize necessary APIs and settings
@@ -24,23 +17,23 @@ INDEX_NAME = st.secrets["PINECONE_INDEX_NAME"]  # Replace with your actual Pinec
 # Spotify developer credentials (Replace with your own or use environment variables)
 client_id = st.secrets["SPOTIFY_CLIENT_ID"]
 client_secret = st.secrets["SPOTIFY_CLIENT_SECRET"]
-redirect_uri = 'http://lyricmatcher.streamlit.app/callback'
-scope = 'playlist-read-collaborative playlist-read-private user-modify-playback-state user-read-playback-state'
-auth_manager = SpotifyOAuth(client_id=client_id, client_secret=client_secret, redirect_uri=redirect_uri, scope=scope)
+
+# Use Spotify's Client Credentials Flow for API access
+auth_manager = SpotifyClientCredentials(client_id=client_id, client_secret=client_secret)
 sp = spotipy.Spotify(auth_manager=auth_manager)
 
-
-
-#CONVERT TO ENV VARIABLES
-MUSIXMATCH_API_KEY= st.secrets["MUSIXMATCH_API_KEY"]
-
 # OpenAI API initialization
-openai.api_key = st.secrets['OPENAI_API_KEY']
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
+# Initialize Pinecone
 pc = Pinecone(
-    api_key=st.secrets['PINECONE_API_KEY']
+    api_key=st.secrets["PINECONE_API_KEY"]
 )
-index=pc.Index(INDEX_NAME)
+index = pc.Index(INDEX_NAME)
+
+
+
+MUSIXMATCH_API_KEY= st.secrets["MUSIXMATCH_API_KEY"]
 
 
 

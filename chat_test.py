@@ -1,15 +1,13 @@
 import spotipy
-from spotipy.oauth2 import SpotifyOAuth
+from spotipy.oauth2 import SpotifyClientCredentials
 import openai
 from fuzzywuzzy import fuzz
 import streamlit as st
-import langdetect
-from langdetect import detect
 import re
 from pinecone import Pinecone
-from upsert import get_lyrics_of_single_song, vectorize_single_song
 from typing import List, Dict
-import os
+from upsert import get_lyrics_of_single_song, vectorize_single_song
+import requests
 
 # Initialize necessary APIs and settings
 MODEL = "text-embedding-ada-002"
@@ -19,18 +17,20 @@ INDEX_NAME = st.secrets["PINECONE_INDEX_NAME"]  # Replace with your actual Pinec
 # Spotify developer credentials (Replace with your own or use environment variables)
 client_id = st.secrets["SPOTIFY_CLIENT_ID"]
 client_secret = st.secrets["SPOTIFY_CLIENT_SECRET"]
-redirect_uri = 'http://lyricmatcher.streamlit.app/callback'
-scope = 'playlist-read-collaborative playlist-read-private user-modify-playback-state user-read-playback-state'
-auth_manager = SpotifyOAuth(client_id=client_id, client_secret=client_secret, redirect_uri=redirect_uri, scope=scope)
+
+# Use Spotify's Client Credentials Flow for API access
+auth_manager = SpotifyClientCredentials(client_id=client_id, client_secret=client_secret)
 sp = spotipy.Spotify(auth_manager=auth_manager)
 
 # OpenAI API initialization
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
+# Initialize Pinecone
 pc = Pinecone(
     api_key=st.secrets["PINECONE_API_KEY"]
 )
-index=pc.Index(INDEX_NAME)
+index = pc.Index(INDEX_NAME)
+
 
 # Helper Functions
 
@@ -174,7 +174,7 @@ left_col, right_col = st.columns([1, 1])  # Adjust column ratio to add spacing o
 
 # LEFT COLUMN - Similar Song Search Section
 with left_col:
-    st.header("Spotify Song Search")
+    st.header("Lyric Similarity Search")
     st.markdown('<div class="spaced-container">', unsafe_allow_html=True)  # Add left padding
     search_input = st.text_input("Type a song title or artist name:")
 
@@ -207,7 +207,7 @@ with left_col:
 with right_col:
     st.header("Lyric-based Song Finder")
     st.markdown('<div class="spaced-container">', unsafe_allow_html=True)  # Add right padding
-    query = st.text_input("Ask a question about a song:")
+    query = st.text_input("Enter any phrase to find songs about that topic:")
 
     if st.button("Search Song by Lyrics"):
         if query:
