@@ -174,7 +174,7 @@ left_col, right_col = st.columns([1, 1])  # Adjust column ratio to add spacing o
 
 # LEFT COLUMN - Similar Song Search Section
 with left_col:
-    st.header("Spotify Song Search")
+    st.header("Lyric Similarity Search")
     st.markdown('<div class="spaced-container">', unsafe_allow_html=True)  # Add left padding
     search_input = st.text_input("Type a song title or artist name:")
 
@@ -207,7 +207,7 @@ with left_col:
 with right_col:
     st.header("Lyric-based Song Finder")
     st.markdown('<div class="spaced-container">', unsafe_allow_html=True)  # Add right padding
-    query = st.text_input("Ask a question about a song:")
+    query = st.text_input("Enter any phrase to find songs about that topic:")
 
     if st.button("Search Song by Lyrics"):
         if query:
